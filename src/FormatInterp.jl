@@ -57,9 +57,17 @@ macro f_str(str)
                     continue
                 end
             elseif state[:level] == 1 && Tokens.kind(tok) == Tokens.OP && Tokens.untokenize(tok) == ":"
-                expr = Meta.parse(join(state[:parts], ""))
-                state = Dict(:name => :format_spec, :value_expr => expr, :parts => [])
-                continue
+                try
+                    expr = Meta.parse(join(state[:parts], ""))
+                    state = Dict(:name => :format_spec, :value_expr => expr, :parts => [])
+                    continue
+                catch e
+                    if isa(e, Meta.ParseError) && occursin("colon expected", e.msg)
+                        # do nothing, current token will be added to parts below
+                    else
+                        rethrow(e)
+                    end
+                end
             end
             push!(state[:parts], Tokens.untokenize(tok))
         elseif state[:name] == :format_spec

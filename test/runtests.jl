@@ -18,6 +18,9 @@ a = 5
 @test f"""{""}""" == ""
 @test f"""{"{}"}""" == "{}"
 @test f" {a * б:.2f} а{{бв{{{'{'}{{{{ }}{{{б:6.3f}" == " 6.17 а{бв{{{{ }{ 1.235"
+@test f"{ifelse(true, 1, 2)}" == "1"
+@test f"{true ? 1 : 2}" == "1"
+@test f"{true ? 1 : 2 :.2f}" == "1.00"
 
 # workaround for all macro exceptions being wrapped in LoadError in Julia
 @test_throws ErrorException try @eval(f"{") catch err; throw(err.error) end
