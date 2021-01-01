@@ -4,6 +4,9 @@ using Tokenize
 using Formatting
 
 
+Formatting._srepr(x::Symbol) = string(x)
+
+
 macro f_str(str)
     @debug "" str
     @debug tokenize(str) |> collect
@@ -52,13 +55,17 @@ macro f_str(str)
                 state[:level] -= 1
                 if state[:level] == 0
                     expr = Meta.parse(join(state[:parts], ""))
-                    push!(exprs, :(string($(esc(expr)))))
+                    expr = :(fmt("s", $(esc(expr))))
+                    push!(exprs, expr)
                     state = Dict(:name => :plain, :num_lbraces => 0, :num_rbraces => 0)
                     continue
                 end
             elseif state[:level] == 1 && Tokens.kind(tok) == Tokens.OP && Tokens.untokenize(tok) == ":"
                 try
                     expr = Meta.parse(join(state[:parts], ""))
+                    if expr isa Expr && expr.head == :incomplete
+                        throw(Meta.ParseError("colon expected"))
+                    end
                     state = Dict(:name => :format_spec, :value_expr => expr, :parts => [])
                     continue
                 catch e

@@ -21,6 +21,8 @@ a = 5
 @test f"{ifelse(true, 1, 2)}" == "1"
 @test f"{true ? 1 : 2}" == "1"
 @test f"{true ? 1 : 2 :.2f}" == "1.00"
+@test f"{(:abc)}" == "abc"
+@test f"{(:abc):5s}" == "abc  "
 
 # workaround for all macro exceptions being wrapped in LoadError in Julia
 @test_throws ErrorException try @eval(f"{") catch err; throw(err.error) end
