@@ -28,7 +28,7 @@ using Test
         @test f"{(:abc):5s}" == "abc  "
         @test f"{a > 4 ? :abc : :def}" == "abc"
         @test f"{:a == :a ? :abc : :def}" == "abc"
-        @test f"{Vector{Int}}{{{Val{Int64}}" == "Vector{Int64}{Val{Int64}"
+        @test f"{NTuple{1,Int}}{{{Val{Int64}}" == "Tuple{Int64}{Val{Int64}"
         @test f"{{Vector{Int64}}}" == "{VectorInt64}"
         @test f"{{Vector{Int64:7s}}}" == "{VectorInt64  }"
         @test f"{push!(Vector{Symbol}(), a > 4 ? :abc : :def)}" == "[:abc]"
