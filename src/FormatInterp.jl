@@ -1,7 +1,8 @@
 module FormatInterp
 export @f_str
-using Tokenize
+using Tokenize: tokenize, untokenize
 using Formatting
+using IterTools: groupby
 
 
 Formatting._srepr(x::Symbol) = string(x)
@@ -44,6 +45,13 @@ function transition(state::InBraces, str::String)
     return InBraces(level, state.content * str), nothing
 end
 
+is_empty(t::PlainToken) = t.content == ""
+is_empty(::InBracesToken) = false
+
+join_tokens(toks::Vector{PlainToken}) = PlainToken(join([t.content for t in toks], ""))
+join_tokens(toks::Vector{InBracesToken}) = only(toks)
+join_tokens(toks::Vector) = join_tokens([t for t in toks])
+
 
 make_expr(tok::PlainToken) = tok.content
 function make_expr(tok::InBracesToken)
@@ -74,8 +82,7 @@ function make_expr(tok::InBracesToken)
 end
 
 
-
-macro f_str(str)
+function parse_to_tokens(str)
     raw_tokens = untokenize.(tokenize(str))
     @debug "" str raw_tokens
     state = Plain()
@@ -88,11 +95,18 @@ macro f_str(str)
     end
     @debug "" tokens
     state != Plain() && throw(ErrorException("Unterminated f-string: state $state"))
-    exprs = map(make_expr, tokens)
+    tokens = filter(!is_empty, tokens)
+    tokens = join_tokens.(groupby(typeof, tokens))
+    @debug "" tokens
+    return tokens
+end
+
+macro f_str(str)
+    exprs = map(make_expr, parse_to_tokens(str))
     @debug "" exprs
     expr = :(join([$(exprs...)], ""))
     @debug "" expr
     return expr
 end
 
-end # module
+end
