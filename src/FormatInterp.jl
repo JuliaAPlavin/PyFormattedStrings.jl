@@ -48,7 +48,10 @@ end
 is_empty(t::PlainToken) = t.content == ""
 is_empty(::InBracesToken) = false
 
-function value_fmt(tok::InBracesToken)
+
+token_to_argument_and_formatstr(tok::PlainToken) = nothing, replace(unescape_string(tok.content), "%" => "%%")
+
+function token_to_argument_and_formatstr(tok::InBracesToken)
     last_colon_ix = findlast(':', tok.content)
 
     parsed_before_colon = try
@@ -65,27 +68,17 @@ function value_fmt(tok::InBracesToken)
             rethrow(e)
         end
     end
-    return if parsed_before_colon === nothing
+    arg, fmt = if parsed_before_colon === nothing
         Meta.parse(tok.content), "s"
     else
         parsed_before_colon, tok.content[nextind(tok.content, last_colon_ix):end]
     end
+    return arg, "%$fmt"
 end
 
 join_tokens(toks::Vector{PlainToken}) = [PlainToken(join([t.content for t in toks], ""))]
 join_tokens(toks::Vector{InBracesToken}) = toks
 join_tokens(toks::Vector) = join_tokens([t for t in toks])
-
-
-make_expr(tok::PlainToken) = unescape_string(tok.content)
-
-function make_expr(tok::InBracesToken)
-    parsed, format_spec = value_fmt(tok)
-    format = Printf.Format("%$format_spec")
-    expr = :(Printf.format($format, $(esc(parsed))))
-    @debug "" tok expr
-    return expr
-end
 
 
 function parse_to_tokens(str)
@@ -111,9 +104,16 @@ function parse_to_tokens(str)
 end
 
 macro f_str(str)
-    exprs = map(make_expr, parse_to_tokens(str))
-    @debug "" exprs
-    expr = :(join([$(exprs...)], ""))
+    combined = map(token_to_argument_and_formatstr, parse_to_tokens(str))
+    @debug "" combined
+    format_str = join(f for (x, f) in combined)
+    arguments = [x for (x, f) in combined if x !== nothing]
+    @debug "" format_str arguments
+    if isempty(format_str)
+        return :("")
+    end
+    format = Printf.Format(format_str)
+    expr = :(Printf.format($format, $(esc.(arguments)...)))
     @debug "" expr
     return expr
 end

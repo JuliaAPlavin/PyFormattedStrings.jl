@@ -42,6 +42,11 @@ CHL.@check()
         @test f"{{Vector{Int64:-7s}}}" == "{VectorInt64  }"
         @test f"{push!(Vector{Symbol}(), a > 4 ? :abc : :def)}" == "[:abc]"
         @test f"{:abc == :abc ? push!(Vector{Symbol}(), a > 4 ? :abc : :def) : nothing}" == "[:abc]"
+        @test f"%123" == "%123"
+        @test f"{5}%" == "5%"
+        @test f"{a}%" == "5%"
+        @test f"{б:.2f}%" == "1.23%"
+        @test f"%{a % 2:d}%%%" == "%1%%%"
     end
 
     @testset "errors" begin
