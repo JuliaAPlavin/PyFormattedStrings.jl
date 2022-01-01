@@ -5,7 +5,6 @@ end module PyFormattedStrings
 
 export @f_str
 
-using IterTools: groupby
 import Printf
 
 
