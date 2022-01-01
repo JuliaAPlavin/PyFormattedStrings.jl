@@ -13,14 +13,17 @@ abstract type State end
 struct Plain <: State end
 struct SeenLbrace <: State end
 struct SeenRbrace <: State end
+struct InBracesBeforeContent <: State end
 struct InBracesAfterContent <: State
     content::String
 end
 
 abstract type Token end
+
 struct PlainToken <: Token
     content::String
 end
+
 struct InBracesToken <: Token
     content::Any
     format::String
@@ -33,16 +36,13 @@ function transition(::Plain, str::String, i::Int)
     return Plain(), PlainToken(string(ch)), nextind(str, i)
 end
 
-is_valid_expr(s::AbstractString) = try
-    expr = Meta.parse(s, raise=true)
-    !(expr isa Expr && expr.head == :incomplete)
-catch ex
-    false
-end
-
 function transition(::SeenLbrace, str::String, i::Int)
     ch = str[i]
     ch == '{' && return Plain(), PlainToken("{"), nextind(str, i)
+    return InBracesBeforeContent(), nothing, i  # current character is part of content, don't move to next
+end
+
+function transition(::InBracesBeforeContent, str::String, i::Int)
     j = lastindex(str)
     while j > i
         is_valid_expr(str[i:j]) && break
@@ -81,6 +81,13 @@ function transition(::SeenRbrace, str::String, i::Int)
     ch = str[i]
     ch == '}' && return Plain(), PlainToken("}"), nextind(str, i)
     error("Unexpected } in f-string")
+end
+
+is_valid_expr(s::AbstractString) = try
+    expr = Meta.parse(s, raise=true)
+    !(expr isa Expr && expr.head == :incomplete)
+catch ex
+    false
 end
 
 is_empty(t::PlainToken) = t.content == ""
@@ -141,6 +148,7 @@ end
 Mirror Python behaviour as far as reasonably possible. Uses the `Printf` standard library under the hood.
 """
 macro f_str(str)
+    @debug "Starting f-string processing" str
     combined = map(token_to_argument_and_formatstr, parse_to_tokens(str))
     @debug "" combined
     format_str = join(f for (x, f) in combined)
