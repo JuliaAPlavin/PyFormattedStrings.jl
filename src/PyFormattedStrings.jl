@@ -5,7 +5,6 @@ end module PyFormattedStrings
 
 export @f_str
 
-using Tokenize: tokenize, untokenize
 using IterTools: groupby
 import Printf
 
@@ -14,8 +13,7 @@ abstract type State end
 struct Plain <: State end
 struct SeenLbrace <: State end
 struct SeenRbrace <: State end
-struct InBraces <: State
-    nest_level::Int
+struct InBracesAfterContent <: State
     content::String
 end
 
@@ -24,28 +22,65 @@ struct PlainToken <: Token
     content::String
 end
 struct InBracesToken <: Token
-    content::String
+    content::Any
+    format::String
 end
 
-function transition(::Plain, str::String)
-    str == "{" && return SeenLbrace(), nothing
-    str == "}" && return SeenRbrace(), nothing
-    return Plain(), PlainToken(str)
+function transition(::Plain, str::String, i::Int)
+    ch = str[i]
+    ch == '{' && return SeenLbrace(), nothing, nextind(str, i)
+    ch == '}' && return SeenRbrace(), nothing, nextind(str, i)
+    return Plain(), PlainToken(string(ch)), nextind(str, i)
 end
-function transition(::SeenLbrace, str::String)
-    str == "{" && return Plain(), PlainToken("{")
-    return InBraces(1, str), nothing
+
+is_valid_expr(s::AbstractString) = try
+    expr = Meta.parse(s, raise=true)
+    !(expr isa Expr && expr.head == :incomplete)
+catch ex
+    false
 end
-function transition(::SeenRbrace, str::String)
-    str == "}" && return Plain(), PlainToken("}")
-    throw(ErrorException("Unexpected } in f-string"))
+
+function transition(::SeenLbrace, str::String, i::Int)
+    ch = str[i]
+    ch == '{' && return Plain(), PlainToken("{"), nextind(str, i)
+    j = lastindex(str)
+    while j > i
+        is_valid_expr(str[i:j]) && break
+        j = prevind(str, j)
+    end
+    @debug "" str[i:j]
+    if get(str, nextind(str, j), nothing) == '}'
+        # try till last colon, in case of a valid expression in brackets like "{a:f}"
+        colon_ix = findprev(':', str, j)
+        if !isnothing(colon_ix) && colon_ix > i
+            j_new = prevind(str, colon_ix)
+            if is_valid_expr(str[i:j_new])
+                j = j_new
+            end
+        end
+    end
+    @debug "" str[i:j]
+    return InBracesAfterContent(str[i:j]), nothing, nextind(str, j)
 end
-function transition(state::InBraces, str::String)
-    level = state.nest_level
-    str == "{" && (level += 1)
-    str == "}" && (level -= 1)
-    level == 0 && return Plain(), InBracesToken(state.content)
-    return InBraces(level, state.content * str), nothing
+
+function transition(tok::InBracesAfterContent, str::String, i::Int)
+    closing_ix = findnext('}', str, i)
+    isnothing(closing_ix) && error("No closing '{' found")
+    colon_ix = findnext(':', str, i)
+    if isnothing(colon_ix) || colon_ix > closing_ix
+        format_str = str[i:prevind(str, closing_ix)]
+        return Plain(), InBracesToken(Meta.parse(tok.content), format_str), nextind(str, closing_ix)
+    else
+        @assert isempty(strip(str[i:prevind(str, colon_ix)]))
+        format_str = str[nextind(str, colon_ix):prevind(str, closing_ix)]
+        return Plain(), InBracesToken(Meta.parse(tok.content), format_str), nextind(str, closing_ix)
+    end
+end
+
+function transition(::SeenRbrace, str::String, i::Int)
+    ch = str[i]
+    ch == '}' && return Plain(), PlainToken("}"), nextind(str, i)
+    error("Unexpected } in f-string")
 end
 
 is_empty(t::PlainToken) = t.content == ""
@@ -55,30 +90,13 @@ is_empty(::InBracesToken) = false
 token_to_argument_and_formatstr(tok::PlainToken) = nothing, replace(unescape_string(tok.content), "%" => "%%")
 
 function token_to_argument_and_formatstr(tok::InBracesToken)
-    last_colon_ix = findlast(':', tok.content)
-
-    parsed_before_colon = try
-        if last_colon_ix === nothing
-            nothing
-        else
-            p = Meta.parse(tok.content[begin:prevind(tok.content, last_colon_ix)])
-            p isa Expr && p.head == :incomplete ? nothing : p
-        end
-    catch e
-        if isa(e, Meta.ParseError) && occursin("colon expected", e.msg)
-            nothing
-        else
-            rethrow(e)
-        end
-    end
-    arg, fmt = if parsed_before_colon === nothing
-        Meta.parse(tok.content), "s"
-    else
-        parsed_before_colon, tok.content[nextind(tok.content, last_colon_ix):end]
+    fmt = tok.format
+    if isempty(strip(fmt))
+        fmt = "s"
     end
     fmt = replace(fmt, '>' => "")  # printf aligns right by default
     fmt = replace(fmt, '<' => "-")  # left alignment is "<" in python and "-" in printf
-    return arg, "%$fmt"
+    return tok.content, "%$fmt"
 end
 
 join_tokens(toks::Vector{PlainToken}) = [PlainToken(join([t.content for t in toks], ""))]
@@ -98,18 +116,17 @@ function split_into_raw_tokens(str)
 end
 
 function parse_to_tokens(str)
-    raw_tokens = split_into_raw_tokens(str)
-    @debug "" str raw_tokens
     state = Plain()
     tokens = Token[]
-    for raw_tok in raw_tokens
-        @debug "" state raw_tok
-        state, tok = transition(state, raw_tok)
+    i = firstindex(str)
+    while i <= lastindex(str)
+        @debug "" state str[i]
+        state, tok, i = transition(state, str, i)
         @debug "" tok
         tok !== nothing && push!(tokens, tok)
     end
     @debug "" tokens
-    state != Plain() && throw(ErrorException("Unterminated f-string: state $state"))
+    state != Plain() && error("Unterminated f-string: state $state")
     tokens = filter(!is_empty, tokens)
     tokens = [tok
         for gr in groupby(typeof, tokens)
