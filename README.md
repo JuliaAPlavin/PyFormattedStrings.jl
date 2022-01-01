@@ -1,6 +1,6 @@
 # Overview
 
-Julia implementation of Python-like _formatted string literals_ or _f-strings_. Mirrors the corresponding Python behavior as closely as possible without reimplementing formatting from scratch. Actual formatting is performed by the `Printf` stdlib, this package just converts the formatted string syntax.
+Julia implementation of Python-like _formatted string literals_ or _f-strings_. Mirrors the corresponding Python behavior as closely as possible without reimplementing formatting from scratch. Actual formatting is performed by the `Printf` stdlib, this package just converts the formatted string syntax. There should be no additional runtime overhead compared to a manually-written corresponding @printf call.
 
 Motivation is effectively the same as for f-strings in Python: see https://www.python.org/dev/peps/pep-0498/ for background.
 
