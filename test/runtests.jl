@@ -65,6 +65,7 @@ doctest(PyFormattedStrings; manual=false)
         @test_throws ErrorException try @eval(f""" {" """) catch err; throw(err.error) end
         @test_throws ErrorException try @eval(f"""{"}""") catch err; throw(err.error) end
         @test_throws ErrorException try @eval(f"{(}") catch err; throw(err.error) end
+        @test_throws ErrorException try @eval(f"}1") catch err; throw(err.error) end
         @test_throws Exception try @eval(f"{(]}") catch err; throw(err.error) end
     end
 
