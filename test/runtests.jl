@@ -1,14 +1,8 @@
 using PyFormattedStrings
 using Test
 
-import CompatHelperLocal as CHL
-CHL.@check()
-
 # using Logging
 # ConsoleLogger(stdout, Logging.Debug) |> global_logger
-
-using Documenter
-doctest(PyFormattedStrings; manual=false)
 
 
 @testset begin
@@ -82,3 +76,9 @@ doctest(PyFormattedStrings; manual=false)
         @test length(PyFormattedStrings.parse_to_tokens("abc d {var} e f")) == 3
     end
 end
+
+import CompatHelperLocal as CHL
+CHL.@check()
+
+using Documenter
+doctest(PyFormattedStrings; manual=false)
