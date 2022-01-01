@@ -54,6 +54,8 @@ doctest(PyFormattedStrings; manual=false)
         @test_broken @eval(f"{a:#d}")  # for some reason "#d}" gets treated as a single token
         @test f"{a:<3d}" == "5  "
         @test f"{a:>3d}" == "  5"
+        @test f"{nothing}" == "nothing"
+        @test f"{missing}" == "missing"
     end
 
     @testset "errors" begin
