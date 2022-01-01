@@ -79,7 +79,7 @@ join_tokens(toks::Vector{InBracesToken}) = toks
 join_tokens(toks::Vector) = join_tokens([t for t in toks])
 
 
-make_expr(tok::PlainToken) = tok.content
+make_expr(tok::PlainToken) = unescape_string(tok.content)
 
 function make_expr(tok::InBracesToken)
     parsed, format_spec = value_fmt(tok)
