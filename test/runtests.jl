@@ -65,6 +65,8 @@ using Test
     @test f"""abc "{a }" def""" == "abc \"5\" def"
     @test f"""abc "{a :d}" def""" == "abc \"5\" def"
     @test f"""abc "{ a :d}" def""" == "abc \"5\" def"
+    @test f"{1:5:s}" == "1:5"
+    @test f"{1:5:121:s}" == "1:5:121"
 end
 
 @testset "errors" begin
