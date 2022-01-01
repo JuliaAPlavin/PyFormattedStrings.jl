@@ -1,5 +1,7 @@
 module FormatInterp
+
 export @f_str
+
 using Tokenize: tokenize, untokenize
 using Formatting
 using IterTools: groupby
@@ -48,13 +50,7 @@ end
 is_empty(t::PlainToken) = t.content == ""
 is_empty(::InBracesToken) = false
 
-join_tokens(toks::Vector{PlainToken}) = [PlainToken(join([t.content for t in toks], ""))]
-join_tokens(toks::Vector{InBracesToken}) = toks
-join_tokens(toks::Vector) = join_tokens([t for t in toks])
-
-
-make_expr(tok::PlainToken) = tok.content
-function make_expr(tok::InBracesToken)
+function value_fmt(tok::InBracesToken)
     last_colon_ix = findlast(':', tok.content)
 
     parsed_before_colon = try
@@ -71,11 +67,22 @@ function make_expr(tok::InBracesToken)
             rethrow(e)
         end
     end
-    parsed, format_spec = if parsed_before_colon === nothing
+    return if parsed_before_colon === nothing
         Meta.parse(tok.content), "s"
     else
         parsed_before_colon, tok.content[nextind(tok.content, last_colon_ix):end]
     end
+end
+
+join_tokens(toks::Vector{PlainToken}) = [PlainToken(join([t.content for t in toks], ""))]
+join_tokens(toks::Vector{InBracesToken}) = toks
+join_tokens(toks::Vector) = join_tokens([t for t in toks])
+
+
+make_expr(tok::PlainToken) = tok.content
+
+function make_expr(tok::InBracesToken)
+    parsed, format_spec = value_fmt(tok)
     expr = :(fmt($format_spec, $(esc(parsed))))
     @debug "" tok expr
     return expr

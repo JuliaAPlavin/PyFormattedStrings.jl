@@ -8,7 +8,7 @@ CHL.@check()
 # ConsoleLogger(stdout, Logging.Debug) |> global_logger
 
 @testset begin
-    @testset "proper usage" begin
+    @testset "variable interpolation" begin
         a = 5
         б = 1.23456789
         @test f"" == ""
