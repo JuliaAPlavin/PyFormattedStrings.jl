@@ -1,4 +1,4 @@
-using FormatInterp
+using PyFormattedStrings
 using Test
 
 import CompatHelperLocal as CHL
@@ -6,6 +6,10 @@ CHL.@check()
 
 # using Logging
 # ConsoleLogger(stdout, Logging.Debug) |> global_logger
+
+using Documenter
+doctest(PyFormattedStrings; manual=false)
+
 
 @testset begin
     @testset "variable interpolation" begin
@@ -61,8 +65,8 @@ CHL.@check()
 
     @testset "optimality" begin
         # test that no unnecessary tokens/splits are given
-        @test length(FormatInterp.parse_to_tokens("")) == 0
-        @test length(FormatInterp.parse_to_tokens("abc d e f")) == 1
-        @test length(FormatInterp.parse_to_tokens("abc d {var} e f")) == 3
+        @test length(PyFormattedStrings.parse_to_tokens("")) == 0
+        @test length(PyFormattedStrings.parse_to_tokens("abc d e f")) == 1
+        @test length(PyFormattedStrings.parse_to_tokens("abc d {var} e f")) == 3
     end
 end

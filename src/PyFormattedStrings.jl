@@ -1,4 +1,7 @@
-module FormatInterp
+@doc let path = joinpath(dirname(@__DIR__), "README.md")
+    include_dependency(path)
+    read(path, String)
+end module PyFormattedStrings
 
 export @f_str
 
@@ -103,6 +106,10 @@ function parse_to_tokens(str)
     return tokens
 end
 
+""" F-string - formatted string literal.
+
+Mirror Python behaviour as far as reasonably possible. Uses the `Printf` standard library under the hood.
+"""
 macro f_str(str)
     combined = map(token_to_argument_and_formatstr, parse_to_tokens(str))
     @debug "" combined
