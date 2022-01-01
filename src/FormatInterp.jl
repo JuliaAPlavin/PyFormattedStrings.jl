@@ -7,7 +7,68 @@ using Formatting
 using IterTools: groupby
 
 
+# https://github.com/JuliaIO/Formatting.jl/pull/100
 Formatting._srepr(x::Symbol) = string(x)
+
+# https://github.com/JuliaIO/Formatting.jl/pull/101
+function Formatting._pfmt_f(out::IO, fs::FormatSpec, x::AbstractFloat)
+    # separate sign, integer, and decimal part
+    rax = round(abs(x), digits = fs.prec)
+    sch = Formatting._signchar(x, fs.sign)
+    intv = trunc(Integer, rax)
+    decv = rax - intv
+
+    # calculate length
+    xlen = Formatting._ndigits(intv, Formatting._Dec()) + (fs.prec > 0 ? 1 + fs.prec : 0)
+    if sch != '\0'
+        xlen += 1
+    end
+
+    # print
+    wid = fs.width
+    if wid <= xlen
+        Formatting._pfmt_float(out, sch, 0, intv, decv, fs.prec)
+    elseif fs.zpad
+        Formatting._pfmt_float(out, sch, wid-xlen, intv, decv, fs.prec)
+    else
+        a = fs.align
+        if a == '<'
+            Formatting._pfmt_float(out, sch, 0, intv, decv, fs.prec)
+            Formatting._repprint(out, fs.fill, wid-xlen)
+        else
+            Formatting._repprint(out, fs.fill, wid-xlen)
+            Formatting._pfmt_float(out, sch, 0, intv, decv, fs.prec)
+        end
+    end
+end
+
+# https://github.com/JuliaIO/Formatting.jl/pull/101
+function Formatting._pfmt_float(out::IO, sch::Char, zs::Integer, intv::Real, decv::Real, prec::Int)
+    # print sign
+    if sch != '\0'
+        print(out, sch)
+    end
+    # print padding zeros
+    if zs > 0
+        Formatting._repprint(out, '0', zs)
+    end
+    idecv = round(Integer, decv * exp10(prec))
+    # print integer part
+    if intv == 0
+        print(out, '0')
+    else
+        Formatting._pfmt_intdigits(out, intv, Formatting._Dec())
+    end
+    # print decimal part
+    if prec > 0
+        print(out, '.')
+        nd = Formatting._ndigits(idecv, Formatting._Dec())
+        if nd < prec
+            Formatting._repprint(out, '0', prec - nd)
+        end
+        Formatting._pfmt_intdigits(out, idecv, Formatting._Dec())
+    end
+end
 
 abstract type State end
 struct Plain <: State end
