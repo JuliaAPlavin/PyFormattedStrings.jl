@@ -56,6 +56,12 @@ using Test
         @test f"\t\\" == "\t\\"
         @test f"""a {join(x for x in ["11", "22", "33"])} b""" == "a 112233 b"
         @test f"""a {join((f"{x:.1f}" for x in [11, 22, 33]), " ")} b""" == "a 11.0 22.0 33.0 b"
+        @test f"""{"xy"}""" == "xy"
+        @test f"""{raw"xy"}""" == "xy"
+        @test f"""{"$a"}""" == "5"
+        @test f"""{"\$a"}""" == raw"$a"
+        @test f"""{raw"$a"}""" == raw"$a"
+        @test f"""{raw"$a$"}""" == raw"$a$"
     end
 
     @testset "errors" begin
