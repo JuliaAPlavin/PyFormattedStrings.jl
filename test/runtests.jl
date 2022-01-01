@@ -15,6 +15,7 @@ doctest(PyFormattedStrings; manual=false)
     @testset "variable interpolation" begin
         a = 5
         б = 1.23456789
+        c = 1234
         @test f"" == ""
         @test f"abc {a} def" == "abc 5 def"
         @test f"{a}{б}" == "51.23456789"
@@ -28,6 +29,7 @@ doctest(PyFormattedStrings; manual=false)
         @test f"abc {a:5d} def" == "abc     5 def"
         @test f"абв {б:6.3f}" == "абв  1.235"
         @test f"{б:.0f}" == "1"
+        @test f"{c:x}" == "4d2"
         @test f"а{{бв{{{{{{ }}{{{б:6.3f}" == "а{бв{{{ }{ 1.235"
         @test f"""{""}""" == ""
         @test f"""{"{}"}""" == "{}"
@@ -56,6 +58,9 @@ doctest(PyFormattedStrings; manual=false)
         @test f"{a:>3d}" == "  5"
         @test f"{nothing}" == "nothing"
         @test f"{missing}" == "missing"
+        @test f"\t\\" == "\t\\"
+        @test f"""a {join(x for x in ["11", "22", "33"])} b""" == "a 112233 b"
+        @test f"""a {join((f"{x:.1f}" for x in [11, 22, 33]), " ")} b""" == "a 11.0 22.0 33.0 b"
     end
 
     @testset "errors" begin
