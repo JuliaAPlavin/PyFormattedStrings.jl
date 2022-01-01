@@ -11,8 +11,9 @@ import Printf
 
 abstract type State end
 struct Plain <: State end
-struct SeenLbrace <: State end
-struct SeenRbrace <: State end
+struct AfterBrace <: State
+    brace::Char
+end
 struct InBracesBeforeContent <: State end
 struct InBracesAfterContent <: State
     content::String
@@ -23,23 +24,42 @@ abstract type Token end
 struct PlainToken <: Token
     content::String
 end
+format_spec(tok::PlainToken) = replace(unescape_string(tok.content), "%" => "%%")
+printf_argument(::PlainToken) = nothing
 
 struct InBracesToken <: Token
     content::String
     format::Union{Nothing, String}
 end
+format_spec(tok::InBracesToken) = let
+    fmt = something(tok.format, "s")  # use %s format if not specified
+    fmt = replace(fmt, '>' => "")     # printf aligns right by default
+    fmt = replace(fmt, '<' => "-")    # left alignment is "<" in python and "-" in printf
+    return "%" * fmt
+end
+printf_argument(tok::InBracesToken) = esc(Meta.parse(tok.content))
+
 
 function transition(::Plain, str::String, i::Int)
-    ch = str[i]
-    ch == '{' && return SeenLbrace(), nothing, nextind(str, i)
-    ch == '}' && return SeenRbrace(), nothing, nextind(str, i)
-    return Plain(), PlainToken(string(ch)), nextind(str, i)
+    next_bracket_ix = findnext(∈(['{', '}']), str, i)
+    if isnothing(next_bracket_ix)
+        return Plain(), PlainToken(str[i:end]), nextind(str, lastindex(str))
+    elseif str[next_bracket_ix] ∈ ['{', '}']
+        return AfterBrace(str[next_bracket_ix]), PlainToken(str[i:prevind(str, next_bracket_ix)]), nextind(str, next_bracket_ix)
+    end
+    @assert false
 end
 
-function transition(::SeenLbrace, str::String, i::Int)
-    ch = str[i]
-    ch == '{' && return Plain(), PlainToken("{"), nextind(str, i)
-    return InBracesBeforeContent(), nothing, i  # current character is part of content, don't move to next
+function transition(st::AfterBrace, str::String, i::Int)
+    if str[i] == st.brace
+        # two braces in a row
+        return Plain(), PlainToken(string(st.brace)), nextind(str, i)
+    elseif st.brace == '{'
+        return InBracesBeforeContent(), nothing, i  # current character is part of content, don't move to next
+    else
+        @assert st.brace == '}'
+        error("Unexpected } in f-string")
+    end
 end
 
 function transition(::InBracesBeforeContent, str::String, i::Int)
@@ -65,62 +85,34 @@ function transition(::InBracesBeforeContent, str::String, i::Int)
     return InBracesAfterContent(str[i:j]), nothing, nextind(str, j)
 end
 
-function transition(tok::InBracesAfterContent, str::String, i::Int)
+function transition(st::InBracesAfterContent, str::String, i::Int)
     closing_ix = findnext('}', str, i)
     isnothing(closing_ix) && error("No closing '}' found")
     colon_ix = findnext(':', str, i)
     if isnothing(colon_ix) || colon_ix > closing_ix
         # no colon within {}
         @assert i == closing_ix
-        return Plain(), InBracesToken(tok.content, nothing), nextind(str, closing_ix)
+        return Plain(), InBracesToken(st.content, nothing), nextind(str, closing_ix)
     else
         # there is a colon
         @assert i == colon_ix
         format_str = str[nextind(str, colon_ix):prevind(str, closing_ix)]
-        return Plain(), InBracesToken(tok.content, format_str), nextind(str, closing_ix)
+        return Plain(), InBracesToken(st.content, format_str), nextind(str, closing_ix)
     end
 end
 
-function transition(::SeenRbrace, str::String, i::Int)
-    ch = str[i]
-    ch == '}' && return Plain(), PlainToken("}"), nextind(str, i)
-    error("Unexpected } in f-string")
-end
-
 is_valid_expr(s::AbstractString) = try
-    expr = Meta.parse(s, raise=true)
+    expr = Meta.parse(s)
     !(expr isa Expr && expr.head == :incomplete)
 catch ex
     false
 end
 
-is_empty(t::PlainToken) = t.content == ""
-is_empty(::InBracesToken) = false
-
-
-token_to_argument_and_formatstr(tok::PlainToken) = nothing, replace(unescape_string(tok.content), "%" => "%%")
-
 function token_to_argument_and_formatstr(tok::InBracesToken)
-    fmt = something(tok.format, "s")
-    fmt = replace(fmt, '>' => "")  # printf aligns right by default
-    fmt = replace(fmt, '<' => "-")  # left alignment is "<" in python and "-" in printf
-    return Meta.parse(tok.content), "%$fmt"
-end
-
-join_tokens(toks::Vector{PlainToken}) = [PlainToken(join([t.content for t in toks], ""))]
-join_tokens(toks::Vector{InBracesToken}) = toks
-join_tokens(toks::Vector) = join_tokens([t for t in toks])
-
-function split_into_raw_tokens(str)
-    ch = rand(Char)
-    while ch ∈ str
-        ch = rand(Char)
-    end
-    replacements_fwd = ['#' => ch]
-    replacements_bck = last.(replacements_fwd) .=> first.(replacements_fwd)
-    str = replace(str, replacements_fwd...)
-    raw_tokens = untokenize.(tokenize(str))
-    return replace.(raw_tokens, replacements_bck...)
+    fmt = something(tok.format, "s")  # use %s format if not specified
+    fmt = replace(fmt, '>' => "")     # printf aligns right by default
+    fmt = replace(fmt, '<' => "-")    # left alignment is "<" in python and "-" in printf
+    return esc(Meta.parse(tok.content)), "%$fmt"
 end
 
 function parse_to_tokens(str)
@@ -133,14 +125,8 @@ function parse_to_tokens(str)
         @debug "" tok
         tok !== nothing && push!(tokens, tok)
     end
-    @debug "" tokens
+    @debug "" tokens state
     state != Plain() && error("Unterminated f-string: state $state")
-    tokens = filter(!is_empty, tokens)
-    tokens = [tok
-        for gr in groupby(typeof, tokens)
-        for tok in join_tokens(gr)
-    ]
-    @debug "" tokens
     return tokens
 end
 
@@ -150,16 +136,16 @@ Mirror Python behaviour as far as reasonably possible. Uses the `Printf` standar
 """
 macro f_str(str)
     @debug "Starting f-string processing" str
-    combined = map(token_to_argument_and_formatstr, parse_to_tokens(str))
-    @debug "" combined
-    format_str = join(f for (x, f) in combined)
-    arguments = [x for (x, f) in combined if x !== nothing]
+    tokens = parse_to_tokens(str)
+    format_str = join(map(format_spec, tokens))
+    arguments = filter(!isnothing, map(printf_argument, tokens))
     @debug "" format_str arguments
     if isempty(format_str)
+        # Printf doesn't support empty string
         return :("")
     end
     format = Printf.Format(format_str)
-    expr = :(Printf.format($format, $(esc.(arguments)...)))
+    expr = :(Printf.format($format, $(arguments...)))
     @debug "" expr
     return expr
 end

@@ -78,13 +78,6 @@ end
     @test_throws Exception try @eval(f"{(]}") catch err; throw(err.error) end
 end
 
-@testset "optimality" begin
-    # test that no unnecessary tokens/splits are given
-    @test length(PyFormattedStrings.parse_to_tokens("")) == 0
-    @test length(PyFormattedStrings.parse_to_tokens("abc d e f")) == 1
-    @test length(PyFormattedStrings.parse_to_tokens("abc d {var} e f")) == 3
-end
-
 import CompatHelperLocal as CHL
 CHL.@check()
 
