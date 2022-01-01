@@ -25,8 +25,8 @@ struct PlainToken <: Token
 end
 
 struct InBracesToken <: Token
-    content::Any
-    format::String
+    content::String
+    format::Union{Nothing, String}
 end
 
 function transition(::Plain, str::String, i::Int)
@@ -45,35 +45,39 @@ end
 function transition(::InBracesBeforeContent, str::String, i::Int)
     j = lastindex(str)
     while j > i
+        closing_ix = findprev(∈(['}', ':']), str, j)
+        (isnothing(closing_ix) || closing_ix < i) && error("No closing '}' found")
+        j = prevind(str, closing_ix)
         is_valid_expr(str[i:j]) && break
-        j = prevind(str, j)
     end
-    @debug "" str[i:j]
     if get(str, nextind(str, j), nothing) == '}'
         # try till last colon, in case of a valid expression in brackets like "{a:f}"
         colon_ix = findprev(':', str, j)
         if !isnothing(colon_ix) && colon_ix > i
             j_new = prevind(str, colon_ix)
             if is_valid_expr(str[i:j_new])
+                @debug "" expr_valid_till_closing=str[i:j] expr_valid_till_colon=str[i:j_new]
                 j = j_new
             end
         end
     end
-    @debug "" str[i:j]
+    @debug "" valid_expr=str[i:j]
     return InBracesAfterContent(str[i:j]), nothing, nextind(str, j)
 end
 
 function transition(tok::InBracesAfterContent, str::String, i::Int)
     closing_ix = findnext('}', str, i)
-    isnothing(closing_ix) && error("No closing '{' found")
+    isnothing(closing_ix) && error("No closing '}' found")
     colon_ix = findnext(':', str, i)
     if isnothing(colon_ix) || colon_ix > closing_ix
-        format_str = str[i:prevind(str, closing_ix)]
-        return Plain(), InBracesToken(Meta.parse(tok.content), format_str), nextind(str, closing_ix)
+        # no colon within {}
+        @assert i == closing_ix
+        return Plain(), InBracesToken(tok.content, nothing), nextind(str, closing_ix)
     else
-        @assert isempty(strip(str[i:prevind(str, colon_ix)]))
+        # there is a colon
+        @assert i == colon_ix
         format_str = str[nextind(str, colon_ix):prevind(str, closing_ix)]
-        return Plain(), InBracesToken(Meta.parse(tok.content), format_str), nextind(str, closing_ix)
+        return Plain(), InBracesToken(tok.content, format_str), nextind(str, closing_ix)
     end
 end
 
@@ -97,13 +101,10 @@ is_empty(::InBracesToken) = false
 token_to_argument_and_formatstr(tok::PlainToken) = nothing, replace(unescape_string(tok.content), "%" => "%%")
 
 function token_to_argument_and_formatstr(tok::InBracesToken)
-    fmt = tok.format
-    if isempty(strip(fmt))
-        fmt = "s"
-    end
+    fmt = something(tok.format, "s")
     fmt = replace(fmt, '>' => "")  # printf aligns right by default
     fmt = replace(fmt, '<' => "-")  # left alignment is "<" in python and "-" in printf
-    return tok.content, "%$fmt"
+    return Meta.parse(tok.content), "%$fmt"
 end
 
 join_tokens(toks::Vector{PlainToken}) = [PlainToken(join([t.content for t in toks], ""))]

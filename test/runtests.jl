@@ -64,6 +64,9 @@ using Test
         @test f"""{raw"$a$"}""" == raw"$a$"
         @test f"""abc "{a} def""" == "abc \"5 def"
         @test f"""abc "{a}" def""" == "abc \"5\" def"
+        @test f"""abc "{a }" def""" == "abc \"5\" def"
+        @test f"""abc "{a :d}" def""" == "abc \"5\" def"
+        @test f"""abc "{ a :d}" def""" == "abc \"5\" def"
     end
 
     @testset "errors" begin
