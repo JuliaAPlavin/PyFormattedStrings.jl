@@ -51,6 +51,9 @@ doctest(PyFormattedStrings; manual=false)
         @test f"{a}%" == "5%"
         @test f"{б:.2f}%" == "1.23%"
         @test f"%{a % 2:d}%%%" == "%1%%%"
+        @test_broken @eval(f"{a:#d}")  # for some reason "#d}" gets treated as a single token
+        @test f"{a:<3d}" == "5  "
+        @test f"{a:>3d}" == "  5"
     end
 
     @testset "errors" begin

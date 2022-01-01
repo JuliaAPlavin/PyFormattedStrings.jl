@@ -76,6 +76,8 @@ function token_to_argument_and_formatstr(tok::InBracesToken)
     else
         parsed_before_colon, tok.content[nextind(tok.content, last_colon_ix):end]
     end
+    fmt = replace(fmt, '>' => "")  # printf aligns right by default
+    fmt = replace(fmt, '<' => "-")  # left alignment is "<" in python and "-" in printf
     return arg, "%$fmt"
 end
 
