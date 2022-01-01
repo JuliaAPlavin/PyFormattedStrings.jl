@@ -1,6 +1,9 @@
 using FormatInterp
 using Test
 
+import CompatHelperLocal as CHL
+CHL.@check()
+
 # using Logging
 # ConsoleLogger(stdout, Logging.Debug) |> global_logger
 
