@@ -13,6 +13,7 @@ CHL.@check()
         б = 1.23456789
         @test f"" == ""
         @test f"abc {a} def" == "abc 5 def"
+        @test f"{a}{б}" == "51.23456789"
         @test f"{Vector{Any}()}" == "Any[]"
         @test f"{'{'}" == "{"
         @test f"""{"{a}"}""" == "{a}"

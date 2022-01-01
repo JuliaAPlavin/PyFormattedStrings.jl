@@ -48,8 +48,8 @@ end
 is_empty(t::PlainToken) = t.content == ""
 is_empty(::InBracesToken) = false
 
-join_tokens(toks::Vector{PlainToken}) = PlainToken(join([t.content for t in toks], ""))
-join_tokens(toks::Vector{InBracesToken}) = only(toks)
+join_tokens(toks::Vector{PlainToken}) = [PlainToken(join([t.content for t in toks], ""))]
+join_tokens(toks::Vector{InBracesToken}) = toks
 join_tokens(toks::Vector) = join_tokens([t for t in toks])
 
 
@@ -96,7 +96,10 @@ function parse_to_tokens(str)
     @debug "" tokens
     state != Plain() && throw(ErrorException("Unterminated f-string: state $state"))
     tokens = filter(!is_empty, tokens)
-    tokens = join_tokens.(groupby(typeof, tokens))
+    tokens = [tok
+        for gr in groupby(typeof, tokens)
+        for tok in join_tokens(gr)
+    ]
     @debug "" tokens
     return tokens
 end
