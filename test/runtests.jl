@@ -29,7 +29,9 @@ doctest(PyFormattedStrings; manual=false)
         @test f"abc {a:5d} def" == "abc     5 def"
         @test f"абв {б:6.3f}" == "абв  1.235"
         @test f"{б:.0f}" == "1"
+        @test f"{б:#.0f}" == "1."
         @test f"{c:x}" == "4d2"
+        @test f"{c:#x}" == "0x4d2"
         @test f"а{{бв{{{{{{ }}{{{б:6.3f}" == "а{бв{{{ }{ 1.235"
         @test f"""{""}""" == ""
         @test f"""{"{}"}""" == "{}"
@@ -53,7 +55,6 @@ doctest(PyFormattedStrings; manual=false)
         @test f"{a}%" == "5%"
         @test f"{б:.2f}%" == "1.23%"
         @test f"%{a % 2:d}%%%" == "%1%%%"
-        @test_broken @eval(f"{a:#d}")  # for some reason "#d}" gets treated as a single token
         @test f"{a:<3d}" == "5  "
         @test f"{a:>3d}" == "  5"
         @test f"{nothing}" == "nothing"

@@ -85,9 +85,20 @@ join_tokens(toks::Vector{PlainToken}) = [PlainToken(join([t.content for t in tok
 join_tokens(toks::Vector{InBracesToken}) = toks
 join_tokens(toks::Vector) = join_tokens([t for t in toks])
 
+function split_into_raw_tokens(str)
+    ch = rand(Char)
+    while ch ∈ str
+        ch = rand(Char)
+    end
+    replacements_fwd = ['#' => ch]
+    replacements_bck = last.(replacements_fwd) .=> first.(replacements_fwd)
+    str = replace(str, replacements_fwd...)
+    raw_tokens = untokenize.(tokenize(str))
+    return replace.(raw_tokens, replacements_bck...)
+end
 
 function parse_to_tokens(str)
-    raw_tokens = untokenize.(tokenize(str))
+    raw_tokens = split_into_raw_tokens(str)
     @debug "" str raw_tokens
     state = Plain()
     tokens = Token[]
