@@ -1,10 +1,11 @@
-using PyFormattedStrings
-using Test
+using TestItems
+using TestItemRunner
+@run_package_tests
 
 # using Logging; ConsoleLogger(stdout, Logging.Debug) |> global_logger
 
 
-@testset "variable interpolation" begin
+@testitem "variable interpolation" begin
     a = 5
     б = 1.23456789
     c = 1234
@@ -69,7 +70,7 @@ using Test
     @test f"{1:5:121:s}" == "1:5:121"
 end
 
-@testset "errors" begin
+@testitem "errors" begin
     # workaround for all macro exceptions being wrapped in LoadError in Julia
     @test_throws ErrorException try @eval(f"{") catch err; throw(err.error) end
     @test_throws ErrorException try @eval(f"{'") catch err; throw(err.error) end
@@ -80,8 +81,10 @@ end
     @test_throws Exception try @eval(f"{(]}") catch err; throw(err.error) end
 end
 
-import CompatHelperLocal as CHL
-CHL.@check()
+@testitem "_" begin
+    import CompatHelperLocal as CHL
+    CHL.@check()
 
-using Documenter
-doctest(PyFormattedStrings; manual=false)
+    using Documenter
+    doctest(PyFormattedStrings; manual=false)
+end
