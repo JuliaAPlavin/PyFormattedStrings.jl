@@ -102,6 +102,15 @@ end
         @test fmt((a=1, b=2, c=3)) == "1 14.00 3"
         @test fmt((a=1, b=2,)) == "1 14.00 10"
     end
+    let fmt = let
+            a = 123
+            ff"{a+b:05d}"
+        end
+        let
+            a = -10
+            @test fmt((b=1,)) == "00124"
+        end
+    end
 end
 
 @testitem "errors" begin
