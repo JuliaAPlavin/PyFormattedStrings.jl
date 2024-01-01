@@ -5,7 +5,7 @@ using TestItemRunner
 # using Logging; ConsoleLogger(stdout, Logging.Debug) |> global_logger
 
 
-@testitem "variable interpolation" begin
+@testitem "basic string literal" begin
     a = 5
     б = 1.23456789
     c = 1234
@@ -83,6 +83,24 @@ end
         @test f"{x:#{w}.{p}d}" == f"{x:10.4d}"
         @test f"{x: 0{w}.{p}f}" == f"{x: 010.4f}"
         @test f"{x:{w}d} {x:.{p}f}" == "        12 12.0000"
+    end
+end
+
+@testitem "function" begin
+    @test ff""() == ""
+    @test ff""((a=2,)) == ""
+    let fmt = ff"{a} {b*2:.2f} {only(c):d}"
+        @test fmt((a=1, b=2, c=[3])) == "1 4.00 3"
+        @test fmt((a=1, b=2, d=5, c=[3])) == "1 4.00 3"
+        @test_throws "`c` not defined" fmt((a=1, b=2))
+    end
+    let
+        a = 123
+        *(x, y) = 10+x+y
+        c = [10]
+        fmt = ff"{a} {b*2:.2f} {only(c):d}"
+        @test fmt((a=1, b=2, c=3)) == "1 14.00 3"
+        @test fmt((a=1, b=2,)) == "1 14.00 10"
     end
 end
 

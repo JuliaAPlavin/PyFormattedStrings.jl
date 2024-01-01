@@ -1,7 +1,7 @@
 name = "PyFormattedStrings"
 uuid = "5f89f4a4-a228-4886-b223-c468a82ed5b9"
 authors = ["Alexander Plavin <alexander@plav.in>"]
-version = "0.1.10"
+version = "0.1.11"
 
 [deps]
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"

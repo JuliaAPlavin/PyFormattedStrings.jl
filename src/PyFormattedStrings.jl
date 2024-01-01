@@ -1,6 +1,6 @@
 module PyFormattedStrings
 
-export @f_str
+export @f_str, @ff_str
 
 import Printf
 
@@ -179,6 +179,35 @@ macro f_str(str)
     @debug "" expr
     return expr
 end
+
+macro ff_str(str)
+    tokens = parse_to_tokens(str)
+    format_str = join(map(format_spec, tokens))
+    arguments = mapreduce(printf_arguments, vcat, tokens; init=[])
+    @debug "" format_str arguments
+    if isempty(format_str)
+        # Printf doesn't support empty string
+        return :((a...; k...) -> "")
+    end
+    format = Printf.Format(format_str)
+    argsym = gensym(:arg)
+    arguments = postwalk(arguments) do x
+        if x isa Symbol
+            xq = QuoteNode(x)
+            return :(hasproperty($argsym, $xq) ? getproperty($argsym, $xq) : $x)
+        end
+        return x
+    end
+    expr = :($(esc(argsym)) -> Printf.format($format, $(arguments...)))
+end
+
+
+# from MacroTools:
+walk(x, inner, outer) = outer(x)
+walk(x::Expr, inner, outer) = outer(Expr(x.head, map(inner, x.args)...))
+walk(x::Union{Tuple,AbstractArray}, inner, outer) = outer(map(inner, x))
+postwalk(f, x) = walk(x, x -> postwalk(f, x), f)
+
 
 using SnoopPrecompile
 @precompile_all_calls @eval begin
