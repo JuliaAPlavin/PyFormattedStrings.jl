@@ -29,9 +29,11 @@ struct InBracesToken <: Token
 end
 format_spec(tok::InBracesToken) = let
     fmt = something(tok.format, "s")  # use %s format if not specified
-    fmt = replace(fmt, '>' => "")     # printf aligns right by default
-    fmt = replace(fmt, '<' => "-")    # left alignment is "<" in python and "-" in printf
-    return "%" * fmt
+    fmt = replace(fmt,
+        '>' => "",     # printf aligns right by default
+        '<' => "-",    # left alignment is "<" in python and "-" in printf
+    )
+    return "%$fmt"
 end
 printf_argument(tok::InBracesToken) = esc(Meta.parse(tok.content))
 
@@ -81,8 +83,30 @@ function transition(::InBracesBeforeContent, str::String, i::Int)
     return InBracesAfterContent(str[i:j]), nothing, nextind(str, j)
 end
 
+function findclosing(closing::Char, str::String, i::Int)
+    @assert closing == '}'
+    opening = '{'
+    depth = 1
+    while true
+        nextix = findnext(∈((opening, closing)), str, i)
+        if isnothing(nextix)
+            return nothing
+        elseif str[nextix] == opening
+            depth += 1
+        elseif str[nextix] == closing
+            depth -= 1
+        else
+            @assert false
+        end
+        if depth == 0
+            return nextix
+        end
+        i = nextind(str, nextix)
+    end
+end
+
 function transition(st::InBracesAfterContent, str::String, i::Int)
-    closing_ix = findnext('}', str, i)
+    closing_ix = findclosing('}', str, i)
     isnothing(closing_ix) && error("No closing '}' found")
     colon_ix = findnext(':', str, i)
     if isnothing(colon_ix) || colon_ix > closing_ix
