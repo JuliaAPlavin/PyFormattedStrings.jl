@@ -35,12 +35,12 @@ format_spec(tok::InBracesToken) = let
     return "%$fmt"
 end
 function printf_arguments(tok::InBracesToken)
-    content_arg = esc(Meta.parse(tok.content))
+    content_arg = Meta.parse(tok.content)
     isnothing(tok.format) && return [content_arg]
     m = eachmatch(r"{([^}]*)}", tok.format)
     isempty(m) && return [content_arg]
     return [
-        [esc(Meta.parse(m[1])) for m in m];
+        [Meta.parse(m[1]) for m in m];
         [content_arg];
     ]
 end
@@ -140,7 +140,7 @@ function token_to_argument_and_formatstr(tok::InBracesToken)
     fmt = something(tok.format, "s")  # use %s format if not specified
     fmt = replace(fmt, '>' => "")     # printf aligns right by default
     fmt = replace(fmt, '<' => "-")    # left alignment is "<" in python and "-" in printf
-    return esc(Meta.parse(tok.content)), "%$fmt"
+    return Meta.parse(tok.content), "%$fmt"
 end
 
 function parse_to_tokens(str)
@@ -175,9 +175,9 @@ macro f_str(str)
         return :("")
     end
     format = Printf.Format(format_str)
-    expr = :(Printf.format($format, $(arguments...)))
+    expr = :($(Printf.format)($format, $(arguments...)))
     @debug "" expr
-    return expr
+    return expr |> esc
 end
 
 macro ff_str(str)
@@ -198,7 +198,7 @@ macro ff_str(str)
         end
         return x
     end
-    expr = :($(esc(argsym)) -> Printf.format($format, $(arguments...)))
+    return :($(argsym) -> $(Printf.format)($format, $(arguments...))) |> esc
 end
 
 
