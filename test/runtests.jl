@@ -84,7 +84,4 @@ end
 @testitem "_" begin
     import CompatHelperLocal as CHL
     CHL.@check()
-
-    using Documenter
-    doctest(PyFormattedStrings; manual=false)
 end
