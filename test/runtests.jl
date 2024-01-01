@@ -92,7 +92,7 @@ end
     let fmt = ff"{a} {b*2:.2f} {only(c):d}"
         @test fmt((a=1, b=2, c=[3])) == "1 4.00 3"
         @test fmt((a=1, b=2, d=5, c=[3])) == "1 4.00 3"
-        @test_throws "`c` not defined" fmt((a=1, b=2))
+        @test_throws UndefVarError fmt((a=1, b=2))
     end
     let
         a = 123
