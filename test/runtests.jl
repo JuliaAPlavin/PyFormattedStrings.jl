@@ -70,6 +70,22 @@ using TestItemRunner
     @test f"{1:5:121:s}" == "1:5:121"
 end
 
+@testitem "dynamic width and precision" begin
+    @static if VERSION ≥ v"1.10-"
+        x = 12
+        w = 10
+        p = 4
+        @test f"{x:{w}d}"      == "        12"
+        @test f"{x:.{p}d}"     == "0012"
+        @test f"{x:{w}.{p}d}"  == "      0012"
+        @test f"{x:+{w}.{p}d}" == "     +0012"
+        @test f"{x:0{w}.{p}d}" == "      0012"
+        @test f"{x:#{w}.{p}d}" == f"{x:10.4d}"
+        @test f"{x: 0{w}.{p}f}" == f"{x: 010.4f}"
+        @test f"{x:{w}d} {x:.{p}f}" == "        12 12.0000"
+    end
+end
+
 @testitem "errors" begin
     # workaround for all macro exceptions being wrapped in LoadError in Julia
     @test_throws ErrorException try @eval(f"{") catch err; throw(err.error) end

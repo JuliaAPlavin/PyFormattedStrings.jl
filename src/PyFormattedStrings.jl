@@ -21,7 +21,7 @@ struct PlainToken <: Token
     content::String
 end
 format_spec(tok::PlainToken) = replace(unescape_string(tok.content), "%" => "%%")
-printf_argument(::PlainToken) = nothing
+printf_arguments(::PlainToken) = []
 
 struct InBracesToken <: Token
     content::String
@@ -29,13 +29,21 @@ struct InBracesToken <: Token
 end
 format_spec(tok::InBracesToken) = let
     fmt = something(tok.format, "s")  # use %s format if not specified
-    fmt = replace(fmt,
-        '>' => "",     # printf aligns right by default
-        '<' => "-",    # left alignment is "<" in python and "-" in printf
-    )
+    fmt = replace(fmt, '>' => "")          # printf aligns right by default
+    fmt = replace(fmt, '<' => "-")         # left alignment is "<" in python and "-" in printf,
+    fmt = replace(fmt, r"{[^}]*}" => "*")  # dynamic width and precision
     return "%$fmt"
 end
-printf_argument(tok::InBracesToken) = esc(Meta.parse(tok.content))
+function printf_arguments(tok::InBracesToken)
+    content_arg = esc(Meta.parse(tok.content))
+    isnothing(tok.format) && return [content_arg]
+    m = eachmatch(r"{([^}]*)}", tok.format)
+    isempty(m) && return [content_arg]
+    return [
+        [esc(Meta.parse(m[1])) for m in m];
+        [content_arg];
+    ]
+end
 
 
 function transition(::Plain, str::String, i::Int)
@@ -160,7 +168,7 @@ macro f_str(str)
     @debug "Starting f-string processing" str
     tokens = parse_to_tokens(str)
     format_str = join(map(format_spec, tokens))
-    arguments = filter(!isnothing, map(printf_argument, tokens))
+    arguments = mapreduce(printf_arguments, vcat, tokens; init=[])
     @debug "" format_str arguments
     if isempty(format_str)
         # Printf doesn't support empty string
