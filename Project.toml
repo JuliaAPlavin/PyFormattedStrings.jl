@@ -5,6 +5,8 @@ version = "0.1.10"
 
 [deps]
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+SnoopPrecompile = "66db9d55-30c0-4569-8b51-7e840670fc0c"
 
 [compat]
+SnoopPrecompile = "1.0.3"
 julia = "1.5"

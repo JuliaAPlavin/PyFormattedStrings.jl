@@ -1,7 +1,4 @@
-@doc let path = joinpath(dirname(@__DIR__), "README.md")
-    include_dependency(path)
-    read(path, String)
-end module PyFormattedStrings
+module PyFormattedStrings
 
 export @f_str
 
@@ -129,9 +126,11 @@ function parse_to_tokens(str)
     return tokens
 end
 
-""" F-string - formatted string literal.
+"""    f"python-like formatting string"
 
-Mirror Python behaviour as far as reasonably possible. Uses the `Printf` standard library under the hood.
+The so-called "f-string", or formatted string literal.
+
+Mirrors Python behaviour as far as reasonably possible. Uses the `Printf` standard library under the hood.
 """
 macro f_str(str)
     @debug "Starting f-string processing" str
@@ -147,6 +146,11 @@ macro f_str(str)
     expr = :(Printf.format($format, $(arguments...)))
     @debug "" expr
     return expr
+end
+
+using SnoopPrecompile
+@precompile_all_calls @eval begin
+    f"abc {123}"
 end
 
 end
