@@ -209,8 +209,8 @@ walk(x::Union{Tuple,AbstractArray}, inner, outer) = outer(map(inner, x))
 postwalk(f, x) = walk(x, x -> postwalk(f, x), f)
 
 
-using SnoopPrecompile
-@precompile_all_calls @eval begin
+using PrecompileTools
+@compile_workload @eval begin
     f"abc {123}"
 end
 
