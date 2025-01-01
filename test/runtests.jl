@@ -111,6 +111,9 @@ end
             @test (@inferred fmt((b=1,))) == "00124"
         end
     end
+
+    @test ff"{_:.2f}"(1) == "1.00"
+    @test ff"{_} {_.a:d}"((;a=3.45, b=7)) == "(a = 3.45, b = 7) 3"
 end
 
 @testitem "errors" begin

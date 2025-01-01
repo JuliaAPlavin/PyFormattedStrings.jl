@@ -192,7 +192,9 @@ macro ff_str(str)
     format = Printf.Format(format_str)
     argsym = gensym(:arg)
     arguments = postwalk(arguments) do x
-        if x isa Symbol
+        if x == :_
+            return argsym
+        elseif x isa Symbol
             xq = QuoteNode(x)
             return :(hasproperty($argsym, $xq) ? getproperty($argsym, $xq) : $x)
         end
