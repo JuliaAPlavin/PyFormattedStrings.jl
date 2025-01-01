@@ -90,8 +90,8 @@ end
     @test ff""() == ""
     @test ff""((a=2,)) == ""
     let fmt = ff"{a} {b*2:.2f} {only(c):d}"
-        @test fmt((a=1, b=2, c=[3])) == "1 4.00 3"
-        @test fmt((a=1, b=2, d=5, c=[3])) == "1 4.00 3"
+        @test (@inferred fmt((a=1, b=2, c=[3]))) == "1 4.00 3"
+        @test (@inferred fmt((a=1, b=2, d=5, c=[3]))) == "1 4.00 3"
         @test_throws UndefVarError fmt((a=1, b=2))
     end
     let
@@ -99,8 +99,8 @@ end
         *(x, y) = 10+x+y
         c = [10]
         fmt = ff"{a} {b*2:.2f} {only(c):d}"
-        @test fmt((a=1, b=2, c=3)) == "1 14.00 3"
-        @test fmt((a=1, b=2,)) == "1 14.00 10"
+        @test (@inferred fmt((a=1, b=2, c=3))) == "1 14.00 3"
+        @test (@inferred fmt((a=1, b=2,))) == "1 14.00 10"
     end
     let fmt = let
             a = 123
@@ -108,7 +108,7 @@ end
         end
         let
             a = -10
-            @test fmt((b=1,)) == "00124"
+            @test (@inferred fmt((b=1,))) == "00124"
         end
     end
 end
