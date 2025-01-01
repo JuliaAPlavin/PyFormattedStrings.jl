@@ -64,7 +64,7 @@ function transition(st::AfterBrace, str::String, i::Int)
         return InBracesBeforeContent(), nothing, i  # current character is part of content, don't move to next
     else
         @assert st.brace == '}'
-        error("Unexpected } in f-string")
+        error("Unexpected } in f-string \"$str\" at position $i")
     end
 end
 
@@ -72,7 +72,7 @@ function transition(::InBracesBeforeContent, str::String, i::Int)
     j = lastindex(str)
     while j > i
         closing_ix = findprev(∈(['}', ':']), str, j)
-        (isnothing(closing_ix) || closing_ix < i) && error("No closing '}' found")
+        (isnothing(closing_ix) || closing_ix < i) && error("No closing '}' found in \"$str\" before $j")
         j = prevind(str, closing_ix)
         is_valid_expr(str[i:j]) && break
     end
@@ -115,7 +115,7 @@ end
 
 function transition(st::InBracesAfterContent, str::String, i::Int)
     closing_ix = findclosing('}', str, i)
-    isnothing(closing_ix) && error("No closing '}' found")
+    isnothing(closing_ix) && error("No closing '}' found in \"$str\" starting at $i")
     colon_ix = findnext(':', str, i)
     if isnothing(colon_ix) || colon_ix > closing_ix
         # no colon within {}
@@ -154,7 +154,7 @@ function parse_to_tokens(str)
         tok !== nothing && push!(tokens, tok)
     end
     @debug "" tokens state
-    state != Plain() && error("Unterminated f-string: state $state")
+    state != Plain() && error("Unterminated f-string: state $state after processing \"$str\"")
     return tokens
 end
 

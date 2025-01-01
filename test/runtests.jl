@@ -118,13 +118,13 @@ end
 
 @testitem "errors" begin
     # workaround for all macro exceptions being wrapped in LoadError in Julia
-    @test_throws ErrorException try @eval(f"{") catch err; throw(err.error) end
-    @test_throws ErrorException try @eval(f"{'") catch err; throw(err.error) end
-    @test_throws ErrorException try @eval(f""" {" """) catch err; throw(err.error) end
-    @test_throws ErrorException try @eval(f"""{"}""") catch err; throw(err.error) end
-    @test_throws ErrorException try @eval(f"{(}") catch err; throw(err.error) end
-    @test_throws ErrorException try @eval(f"}1") catch err; throw(err.error) end
-    @test_throws Exception try @eval(f"{(]}") catch err; throw(err.error) end
+    @test_throws "Unterminated" @eval f"{"
+    @test_throws "Unterminated" @eval f"{'"
+    @test_throws "No closing '}'" @eval f""" {" """
+    @test_throws "invalid syntax (incomplete" @eval f"""{"}"""
+    @test_throws "invalid syntax (incomplete" @eval f"{(}"
+    @test_throws "Unexpected }" @eval f"}1"
+    @test_throws "No closing '}'" @eval f"{(]}"
 end
 
 @testitem "_" begin
