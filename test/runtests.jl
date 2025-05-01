@@ -114,15 +114,19 @@ end
 
     @test ff"{_:.2f}"(1) == "1.00"
     @test ff"{_} {_.a:d}"((;a=3.45, b=7)) == "(a = 3.45, b = 7) 3"
+
+    @test ff"{}"(123.456) == "123.456"
+    @test ff"{} abc"(123.456) == "123.456 abc"
+    @test ff"x {:.2f}"(123.456) == "x 123.46"
 end
 
 @testitem "errors" begin
     # workaround for all macro exceptions being wrapped in LoadError in Julia
     @test_throws "Unterminated" @eval f"{"
-    @test_throws "Unterminated" @eval f"{'"
+    @test_throws "No closing '}' found" @eval f"{'"
     @test_throws "No closing '}'" @eval f""" {" """
-    @test_throws "invalid syntax (incomplete" @eval f"""{"}"""
-    @test_throws "invalid syntax (incomplete" @eval f"{(}"
+    @test_throws "No closing '}'" @eval f"""{"}"""
+    @test_throws "No closing '}'" @eval f"{(}"
     @test_throws "Unexpected }" @eval f"}1"
     @test_throws "No closing '}'" @eval f"{(]}"
 end

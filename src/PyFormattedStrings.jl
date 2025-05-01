@@ -70,7 +70,7 @@ end
 
 function transition(::InBracesBeforeContent, str::String, i::Int)
     j = lastindex(str)
-    while j > i
+    while j ≥ i
         closing_ix = findprev(∈(['}', ':']), str, j)
         (isnothing(closing_ix) || closing_ix < i) && error("No closing '}' found in \"$str\" before $j")
         j = prevind(str, closing_ix)
@@ -88,6 +88,7 @@ function transition(::InBracesBeforeContent, str::String, i::Int)
         end
     end
     @debug "" valid_expr=str[i:j]
+    @assert is_valid_expr(str[i:j])
     return InBracesAfterContent(str[i:j]), nothing, nextind(str, j)
 end
 
@@ -192,7 +193,7 @@ macro ff_str(str)
     format = Printf.Format(format_str)
     argsym = gensym(:arg)
     arguments = postwalk(arguments) do x
-        if x == :_
+        if x == :_ || x === nothing
             return argsym
         elseif x isa Symbol
             xq = QuoteNode(x)
