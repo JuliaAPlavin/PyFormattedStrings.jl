@@ -1,41 +1,68 @@
-# Overview
+# PyFormattedStrings.jl
 
-Julia implementation of Python-like _formatted string literals_ or _f-strings_. See [PEP 498](https://www.python.org/dev/peps/pep-0498/) for the original motivation and background for f-strings in Python.
+Python-style `f`-strings for Julia.
 
-`PyFormattedStrings.jl` mirrors the corresponding Python behavior as closely as possible without reimplementing formatting from scratch. Actual formatting is performed by the `Printf` stdlib, this package just converts the formatted string syntax. There is no additional runtime overhead compared to a manually-written corresponding `@printf` call.
-
-Supports all f-string features that are directly available in `Printf`. Compared to Python, these are not implemented: (1) postfix modifiers (`!a`, `!s`, `!r`), (2)  `=` and `^` alignment options, (3) `=` sign to show expression.
-
-
-
-# Examples
+See [PEP 498](https://www.python.org/dev/peps/pep-0498/) for the original Python `f`-strings feature. \
+Mirrors Python behavior as closely as possible – formatting is performed by the `Printf` stdlib, this package converts the syntax. Zero overhead compared to a manually-written `@printf` call.
 
 ```julia
-julia> using PyFormattedStrings
+using PyFormattedStrings
+
+# Basic interpolation
+name, score = "Alice", 95.7
+f"Player {name} scored {score:.1f} points"    # "Player Alice scored 95.7 points"
+
+# Arbitrary expressions inside braces
+a, b = 10, 3
+f"{a} / {b} = {a/b:.2f}"                      # "10 / 3 = 3.33"
+
+# Works with any Julia expression
+f"Result: {sum([1, 2, 3]) * 2:d}"             # "Result: 12"
 ```
+
+### Format specs
+
+All standard Printf formats work: width, precision, alignment, padding, hex, etc.
 
 ```julia
-julia> x = 5.123
+# Alignment and padding
+price = 42
+f"Price: ${price:>6d}"              # "Price: $    42"
+f"Item{1:<4d}qty{10:>5d}"           # "Item1   qty   10"
 
-julia> f"{x}"
-"5.123"
+# Number formatting
+pi_approx = 3.14159
+f"π ≈ {pi_approx:.2f}"              # "π ≈ 3.14"
+f"{255:#x}"                         # "0xff"
 
-julia> f"value is now {x:.1f}"
-"value is now 5.1"
+# Zero padding
+iteration = 5
+f"file_{iteration:04d}.dat"         # "file_0005.dat"
 
-julia> f"fraction of {(x-5)*100:d}%"
-"fraction of 12%"
+# Dynamic width and precision
+value, width, prec = 123.456, 10, 2
+f"Value: {value:{width}.{prec}f}"   # "Value:     123.46"
 ```
 
-With the `ff"..."` syntax, the formatting string can be created ahead of time and applied to values later:
+### Reusable format functions
+
+Create formatting functions with `ff"..."` for repeated use:
+
 ```julia
-julia> fmtfunc = ff"value a={a:.2f} and first b={first(b):d}"
+# Named fields from named tuples
+report = ff"[{level:>5s}] {message}"
+report((level="INFO", message="Starting process"))   # "[INFO] Starting process"
+report((level="ERROR", message="Failed"))            # "[ERROR] Failed"
 
-julia> fmtfunc((a=1, b=[2, 3]))
-"value a=1.00 and first b=2"
+# Access properties of the argument
+fmt_complex = ff"{re:.2f} + {im:.2f}i"
+fmt_complex(3.14159 + 2.71828im)                     # "3.14 + 2.72i"
 
-julia> fmtfunc = ff"{re:.2f} {im:d}"
-
-julia> fmtfunc(1.234 + 5.678im)
-"1.23 6"
+# Single-argument forms (useful for map, broadcast, etc.)
+formatter = ff"{:.1f}%"
+formatter.(90:5:100)                                 # ["90.0%", "95.0%", "100.0%"]
 ```
+
+### Limitations
+
+Compared to Python, these features are not implemented yet: (1) postfix modifiers (`!a`, `!s`, `!r`), (2) `=` and `^` alignment options, (3) `=` sign to show expression.
